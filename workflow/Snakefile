@@ -1,13 +1,13 @@
 import re
 
-# all files in fastq/ ending with ".fq.gz" are treated as samples
-SAMPLES = [re.sub(".fq.gz", "", file) for file in os.listdir("00_raw")]
-# SPLIT_SAMPLES = [re.sub(".fq.gz", "", file) for file in os.listdir("fastq_split/split/")]
+# all files in 00_raw/ ending with ".fastq.gz" are treated as samples
+SAMPLES = [re.sub(".fastq.gz", "", file) for file in os.listdir("00_raw")]
+# SPLIT_SAMPLES = [re.sub(".fastq.gz", "", file) for file in os.listdir("fastq_split/split/")]
 
 # target organism tRNAs file:
 TRNA_FASTA_TARGET = "references/hg38-mature-tRNAs.fa"
 # spike-in organism tRNAs file:
-TRNA_FASTA_SPIKE = "references/hg38-mature-tRNAs.fa"
+TRNA_FASTA_SPIKE = "references/eschColi_K_12_MG1655-mature-tRNAs.fa"
 
 ################
 # target rules #
@@ -15,40 +15,44 @@ TRNA_FASTA_SPIKE = "references/hg38-mature-tRNAs.fa"
 
 rule all:
     input:
-        expand("results/bowtie2_bam/{sample}.bam", sample=SAMPLES),
-        expand("results/salmon_quants/{sample}/quant.sf", sample=SAMPLES),
-        expand("results/salmon_quants/{sample}/quant.sf", sample=SPLIT_SAMPLES),
-        expand("results/feature_counts/counts_{sample}.txt", sample=SAMPLES),
-        expand("results/feature_counts/counts_q10_{sample}.txt", sample=SAMPLES),
-        expand("results/feature_counts/counts_{sample}.txt", sample=SPLIT_SAMPLES),
-        expand("results/feature_counts/counts_q10_{sample}.txt", sample=SPLIT_SAMPLES)
-
-
-rule salmon_only:
-    input:
-        expand("results/salmon_quants/{sample}/quant.sf", sample=SAMPLES)
-
-rule salmon_only_split:
-    input:
-        expand("results/salmon_quants/{sample}/quant.sf", sample=SPLIT_SAMPLES)
+        expand("02_alignment_bam/{sample}.bam", sample=SAMPLES),
+        expand("03_featureCounts/counts_q10_{sample}.txt", sample=SAMPLES),
 
 #############
 # job rules #
 #############
 
+rule fasta2tab_target:
+    input:
+        script="workflow/scripts/fasta2tab.awk",
+        fasta=TRNA_FASTA_TARGET
+    output:
+        temp("references/target_trnas.tab")
+    shell:
+        "awk -f {input.script} {input.fasta} > {output}"
+
 rule deduplicate_trna_target:
     input:
-        script="scripts/deduplicate_trna.py",
-        fasta=TRNA_FASTA_TARGET
+        script="workflow/scripts/deduplicate_trna.py",
+        fasta="references/target_trnas.tab"
     output:
         "references/target_trnas_deduplicated.fa"
     shell:
         "python {input.script} {input.fasta} {output}"
+
+rule fasta2tab_spike:
+    input:
+        script="workflow/scripts/fasta2tab.awk",
+        fasta=TRNA_FASTA_SPIKE
+    output:
+        temp("references/spike_trnas.tab")
+    shell:
+        "awk -f {input.script} {input.fasta} > {output}"
         
 rule deduplicate_trna_spike:
     input:
-        script="scripts/deduplicate_trna.py",
-        fasta=TRNA_FASTA_SPIKE
+        script="workflow/scripts/deduplicate_trna.py",
+        fasta="references/spike_trnas.tab"
     output:
         "references/spike_trnas_deduplicated.fa"
     shell:
@@ -67,34 +71,36 @@ rule bowtie2_index:
     input:
         fasta="references/trnas_concat.fa"
     output:
-        index="references/bowtie_index/trnas_concat.1.bt2"
+        index="references/bowtie_index/trnas_concat.1.bt2",
+        flag=touch("bowtie2_index.done")
     params:
-        index_name="trnas_concat"
+        index_name="references/bowtie_index/trnas_concat"
     log:
         "logs/bowtie2-build/bowtie2-build.log"
     conda:
         "envs/samtools.yaml"
     shell:
-        "bowtie2-build {input.fasta} {params.index_name} 2> {log}
+        "bowtie2-build {input.fasta} {params.index_name} 2> {log}"
 
 rule make_FC_reference:
     input:
         fasta="references/trnas_concat.fa"
     output:
-        saf="references/trnas_concat.saf"
+        saf="references/trnas_concat.saf",
+        flag=touch("saf.done")
     shell:
         """
-        grep '>' {input.fasta} | \ 
-        sed 's/>//' | sed 's/ /\t/g' | cut -f1,2 | \ 
-        awk 'BEGIN{{print "GeneID", "Chr", "Start", "End", "Strand"}};{{ print $1, $1, 1, $2,"+" }}' | \ 
+        grep '>' {input.fasta} | \
+        sed 's/>//' | sed 's/ /\t/g' | cut -f1,2 | \
+        awk 'BEGIN{{print "GeneID", "Chr", "Start", "End", "Strand"}};{{ print $1, $1, 1, $2,"+" }}' | \
         sed 's/ /\t/g' > {output.saf}
         """
 
 rule cutadapt_1_u2:
     input:
-        "00_raw/{sample}.fq.gz"
+        "00_raw/{sample}.fastq.gz"
     output:
-        temp("01_preprocessed_fastq/temp1.{sample}.fq.gz")
+        temp("01_preprocessed_fastq/temp1.{sample}.fastq.gz")
     log:
         "logs/01_preprocessed_fastq/{sample}/cut1_trim2.log"
     #threads: 50
@@ -105,9 +111,9 @@ rule cutadapt_1_u2:
 
 # rule cutadapt_1_u2_split:
 #     input:
-#         "fastq_split/split/{sample}.fq.gz"
+#         "fastq_split/split/{sample}.fastq.gz"
 #     output:
-#         temp("results/preprocessed_fastq/temp1.{sample}.fq.gz")
+#         temp("results/preprocessed_fastq/temp1.{sample}.fastq.gz")
 #     log:
 #         "logs/cutadapt/{sample}/cut1_trim2.log"
 #     #threads: 50
@@ -118,9 +124,9 @@ rule cutadapt_1_u2:
 
 rule cutadapt_2_5ad:
     input:
-        "01_preprocessed_fastq/temp1.{sample}.fq.gz"
+        "01_preprocessed_fastq/temp1.{sample}.fastq.gz"
     output:
-        temp("01_preprocessed_fastq/temp2.{sample}.fq.gz")
+        temp("01_preprocessed_fastq/temp2.{sample}.fastq.gz")
     log:
         "logs/01_preprocessed_fastq/{sample}/cut2_5ad.log"
     #threads:50
@@ -131,9 +137,9 @@ rule cutadapt_2_5ad:
 
 rule cutadapt_3_3ad:
     input:
-        "01_preprocessed_fastq/temp2.{sample}.fq.gz"
+        "01_preprocessed_fastq/temp2.{sample}.fastq.gz"
     output:
-        temp("01_preprocessed_fastq/temp3.{sample}.fq.gz")
+        temp("01_preprocessed_fastq/temp3.{sample}.fastq.gz")
     log:
         "logs/01_preprocessed_fastq/{sample}/cut3_3ad.log"
     #threads: 50
@@ -144,9 +150,9 @@ rule cutadapt_3_3ad:
 
 rule cutadapt_4_filter:
     input:
-        "01_preprocessed_fastq/temp3.{sample}.fq.gz"
+        "01_preprocessed_fastq/temp3.{sample}.fastq.gz"
     output:
-        "01_preprocessed_fastq/{sample}.trimmed.fq.gz"
+        "01_preprocessed_fastq/{sample}.trimmed.fastq.gz"
     log:
         "logs/01_preprocessed_fastq/{sample}/cut4_filter.log"
     #threads: 50
@@ -157,11 +163,12 @@ rule cutadapt_4_filter:
 
 rule align_bowtie2:
     input:
-        "01_preprocessed_fastq/{sample}.trimmed.fq.gz"
+        files="01_preprocessed_fastq/{sample}.trimmed.fastq.gz",
+        flag=rules.bowtie2_index.output.flag
     output:
         "02_alignment_bam/{sample}.bam"
     params:
-        index=BOWTIE_INDEX
+        index="references/bowtie_index/trnas_concat"
     log:
         "logs/02_alignment_bam/{sample}.log"
     conda:
@@ -174,7 +181,7 @@ rule align_bowtie2:
 
 # rule salmon_quant:
 #     input:
-#         "results/preprocessed_fastq/{sample}.trimmed.fq.gz"
+#         "results/preprocessed_fastq/{sample}.trimmed.fastq.gz"
 #     output:
 #         "results/salmon_quants/{sample}/quant.sf"
 #     params:
@@ -205,7 +212,8 @@ rule align_bowtie2:
 
 rule featureCounts_q10:
     input:
-        "02_alignment_bam/{sample}.bam"
+        bam="02_alignment_bam/{sample}.bam",
+        flag=rules.make_FC_reference.output.flag
     output:
         "03_featureCounts/counts_q10_{sample}.txt"
     params:
@@ -217,4 +225,4 @@ rule featureCounts_q10:
     threads: 100
     shell:
         "featureCounts -T 64 -d 10 -M -O -t feature -f -F SAF -Q 10 "
-        "-a {params.reference} -o {output} {input} 2> {log}"
+        "-a {params.reference} -o {output} {input.bam} 2> {log}"
