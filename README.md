@@ -1,17 +1,18 @@
-This is a workflow for processing and quanitifying tRNA-seq reads.
+This is a workflow for processing and quanitifying tRNA-seq reads with added spike-in.
 
-Setup:
+The snakemake pipeline handles constructing references, read preprocessing and alignment automatically.
 
-1. Put files containing raw reads in FASTQ format in the 'fastq' directory. Make sure their extensions are '.fastq.gz', as all other types will be ignored.
-2. Put correct bowtie2 index files in the 'references/bowtie2_index' directory.
-3. Put correct salmon index folder in the 'references/salmon_index' directory.
-4. Put "xxxx-mature-tRNAs.fa" file form gtRNA-db in the 'tRNA' directory
+Downstream stages happen in the included notebook.
+
+## Setup:
+
+1. Put files containing raw reads in FASTQ format in the '00_raw' directory(make one if it's not there). Make sure their extensions are '.fastq.gz', as all other types will be ignored.
+2. Download mature tRNA fastas for both target and spike-in organism and put them into the 'references' directory.
 5. In the snakefile, set:
-  - BOWTIE_INDEX to 'references/bowtie2_index/{name_of_your_bowtie2_index}' – don't include file extensions, just the name of your index
-  - SALMON_INDEX to 'references/salmon_index/{name_of_your_salmon_index}' – again, just the folder name
-  - TRNA_FASTA to '/references/trna/{your_mature-trna.fa}'
+  - TRNA_FASTA_TARGET to "references/<name_of_target_fasta_file>"
+  - TRNA_FASTA_SPIKE to "references/<name_of_spike_fasta_file>"
 
-Running pipeline:
+## Running pipeline:
 
 First run:
 ```
