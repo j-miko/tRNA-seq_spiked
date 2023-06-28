@@ -2,7 +2,7 @@ This is a workflow for processing and quanitifying tRNA-seq reads with added spi
 
 The snakemake pipeline handles constructing references, read preprocessing and alignment automatically.
 
-Downstream stages happen in the included notebook.
+Downstream stages happen in the included notebooks
 
 ## Setup:
 
@@ -25,3 +25,9 @@ To run full pipeline:
 ```
 snakemake -p --use-conda --cores
 ```
+
+## Plotting results with included notebooks
+
+There are two notebooks included with the repo. They contain code and instructions for producing a basic set of figures out of the data. Both do the same thing, but one aggregates isodecoder tRNA into isoacceptor (codon) groups.
+
+Both run R code from python and require rpy2 to be installed via pip.
