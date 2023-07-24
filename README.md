@@ -16,14 +16,14 @@ Downstream stages happen in the included notebooks
 
 First run:
 ```
-snakemake -n
+snakemake -n --use-conda --cores [number-of-cores-to-use]
 ```
 
 to verify if you've set everything up properly. If it doesn't throw up any errors, you're good to go.
 
 To run full pipeline:
 ```
-snakemake -p --use-conda --cores
+snakemake --use-conda --cores [number-of-cores-to-use]
 ```
 
 ## Plotting results with included notebooks
