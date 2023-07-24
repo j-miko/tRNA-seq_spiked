@@ -7,7 +7,7 @@ Downstream stages happen in the included notebooks
 ## Setup:
 
 1. Put files containing raw reads in FASTQ format in the '00_raw' directory(make one if it's not there). Make sure their extensions are '.fastq.gz', as all other types will be ignored.
-2. Download mature tRNA fastas for both target and spike-in organism and put them into the 'references' directory.
+2. Download mature tRNA fastas (from gtRNAdb) for both target and spike-in organism and put them into the 'references' directory.
 5. In the snakefile, set:
   - TRNA_FASTA_TARGET to "references/<name_of_target_fasta_file>"
   - TRNA_FASTA_SPIKE to "references/<name_of_spike_fasta_file>"
