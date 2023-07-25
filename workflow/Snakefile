@@ -173,7 +173,7 @@ rule align_bowtie2:
         "logs/02_alignment_bam/{sample}.log"
     conda:
         "envs/samtools.yaml"
-    threads: 100
+    threads: 8
     shell:
         "(bowtie2 -p {threads} --min-score G,1,8 --local -D 20 "
         "-R 3 -N 1 -L 10 -i S,1,0.5 -x {params.index} "
