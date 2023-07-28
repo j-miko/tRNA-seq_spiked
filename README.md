@@ -5,7 +5,7 @@ The snakemake pipeline handles constructing references, read preprocessing and a
 Downstream stages happen in the included notebooks.
 
 ## Requirements
-- Snakemake (preferrably installed through [mamba](https://mamba.readthedocs.io/en/latest/installation.html); conda is not guaranteed to work depending on your installation)
+- [Snakemake](https://snakemake.readthedocs.io/en/stable/) (preferrably installed through [mamba](https://mamba.readthedocs.io/en/latest/installation.html); conda is not guaranteed to work depending on your installation)
 - [pandas](https://pandas.pydata.org/docs/getting_started/index.html) installed in the snakemake environment
 - If you plan to use the included notebooks, [rpy2](https://pypi.org/project/rpy2/) and R are required.
 
